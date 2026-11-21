@@ -1,5 +1,10 @@
 {
   "appId": "com.aihub.app",
   "appName": "AI Hub",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
 }
