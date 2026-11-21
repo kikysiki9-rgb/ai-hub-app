@@ -147,8 +147,9 @@ footer{
   <div class="modal">
     <h2>Добавить API-ключ</h2>
     <input placeholder="sk-..." id="keyInput">
-    <input placeholder="Base URL (например ai.starimg.ru)" id="urlInput">
-    <button class="save" onclick="document.getElementById('modal').classList.remove('open')">Сохранить</button>
+    <input placeholder="Base URL (https://ai.starimg.ru)" id="urlInput">
+    <input placeholder="Имя модели (например claude-opus-5)" id="modelInput">
+    <button class="save" onclick="saveKey()">Сохранить</button>
     <span class="close" onclick="document.getElementById('modal').classList.remove('open')">Отмена</span>
   </div>
 </div>
@@ -169,21 +170,61 @@ models.forEach((m,i)=>{
   strip.appendChild(el);
 });
 
-function sendMsg(){
+let apiKey='', baseUrl='', modelName='';
+let history=[];
+
+function saveKey(){
+  apiKey=document.getElementById('keyInput').value.trim();
+  baseUrl=document.getElementById('urlInput').value.trim().replace(/\/$/,'');
+  modelName=document.getElementById('modelInput').value.trim();
+  document.getElementById('modal').classList.remove('open');
+}
+
+function addMsg(role,text){
+  const chat=document.getElementById('chat');
+  const el=document.createElement('div');
+  el.className='msg '+(role==='user'?'user':'ai');
+  el.textContent=text;
+  chat.appendChild(el);
+  chat.scrollTop=chat.scrollHeight;
+  return el;
+}
+
+async function sendMsg(){
   const inp=document.getElementById('inp');
   const text=inp.value.trim();
   if(!text)return;
-  const chat=document.getElementById('chat');
-  const u=document.createElement('div'); u.className='msg user'; u.textContent=text;
-  chat.appendChild(u);
   inp.value='';
-  chat.scrollTop=chat.scrollHeight;
-  setTimeout(()=>{
-    const a=document.createElement('div'); a.className='msg ai';
-    a.textContent='(демо-ответ) здесь будет реальный ответ выбранной модели после подключения бэкенда.';
-    chat.appendChild(a);
-    chat.scrollTop=chat.scrollHeight;
-  },500);
+  addMsg('user',text);
+
+  if(!apiKey||!baseUrl||!modelName){
+    addMsg('ai','Сначала нажми 🔑 Ключ сверху и заполни ключ, Base URL и имя модели.');
+    return;
+  }
+
+  history.push({role:'user',content:text});
+  const thinking=addMsg('ai','...');
+
+  try{
+    const res=await fetch(baseUrl+'/v1/chat/completions',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+apiKey
+      },
+      body:JSON.stringify({model:modelName, messages:history})
+    });
+    const data=await res.json();
+    if(data.error){
+      thinking.textContent='Ошибка: '+(data.error.message||JSON.stringify(data.error));
+      return;
+    }
+    const reply=data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    thinking.textContent=reply || 'Пустой ответ от сервера: '+JSON.stringify(data);
+    if(reply) history.push({role:'assistant',content:reply});
+  }catch(e){
+    thinking.textContent='Не получилось связаться с сервером: '+e.message;
+  }
 }
 </script>
 </body>
