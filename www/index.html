@@ -67,8 +67,15 @@ header h1{
 }
 .provider-label{
   font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
-  padding:10px 2px 4px;
+  padding:10px 2px 4px; display:flex; align-items:center; gap:6px; scroll-margin-top:10px;
 }
+.prov-tabs{display:flex; gap:6px; margin-bottom:8px; overflow-x:auto;}
+.prov-tab{
+  flex:0 0 auto; display:flex; align-items:center; gap:5px; padding:7px 12px;
+  border-radius:16px; background:var(--surface2); border:1px solid var(--border);
+  font-size:12.5px; font-weight:600;
+}
+.prov-tab:active{transform:scale(.95);}
 .model-row{
   display:flex; align-items:center; gap:10px; padding:11px 10px; border-radius:12px;
   transition:background .2s ease, box-shadow .2s ease, transform .15s ease;
@@ -94,7 +101,17 @@ main{flex:1; overflow-y:auto; padding:10px 16px 20px; display:flex; flex-directi
   align-self:flex-start; background:var(--surface); border:1px solid var(--border);
   border-bottom-left-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.25);
 }
+.msg-tag{font-size:10.5px; font-weight:700; letter-spacing:.3px; margin-bottom:4px; opacity:.85;}
+.msg-text{white-space:pre-wrap;}
 .hint{color:var(--muted); font-size:12px; text-align:center; margin-top:6px;}
+.dots{display:inline-flex; gap:4px; align-items:center; height:14px;}
+.dots span{
+  width:6px; height:6px; border-radius:50%; background:var(--muted);
+  animation:bounce 1.1s ease-in-out infinite;
+}
+.dots span:nth-child(2){animation-delay:.15s;}
+.dots span:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0); opacity:.4;}40%{transform:translateY(-5px); opacity:1;}}
 footer{
   padding:10px 12px; border-top:1px solid var(--border);
   background:rgba(11,11,16,.7); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -133,9 +150,25 @@ footer{
 }
 .modal-bg.open .modal{transform:translateY(0);}
 .modal h2{margin:0 0 12px; font-size:16px;}
-.modal input{
+.modal input, .modal textarea{
   width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text);
   padding:12px 14px; border-radius:12px; font-size:14px; margin-bottom:10px;
+  font-family:inherit;
+}
+.modal textarea{resize:vertical; min-height:110px; line-height:1.4;}
+.modal .sub{color:var(--muted); font-size:12px; margin:-4px 0 10px;}
+.key-row{
+  display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px;
+  background:var(--surface2); border:1px solid var(--border); margin-bottom:8px;
+  transition:box-shadow .2s ease;
+}
+.key-row.active{box-shadow:0 0 0 1px var(--accent) inset;}
+.key-row .kr-info{flex:1; min-width:0;}
+.key-row .kr-label{font-size:13px; font-weight:600;}
+.key-row .kr-sub{font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.key-row .kr-del{color:var(--red); font-size:18px; padding:4px 8px;}
+.add-key-toggle{
+  text-align:center; font-size:13px; color:var(--accent); padding:8px; margin-bottom:6px;
 }
 .modal button.save{
   width:100%; background:var(--accent); border:none; color:#fff; padding:13px; border-radius:12px; font-size:14.5px; font-weight:600;
@@ -145,88 +178,141 @@ footer{
 </head>
 <body>
 
-<header>
-  <h1>🧠 AI Hub</h1>
-  <button class="key-btn" onclick="openKeyModal()">🔑 Ключ</button>
-</header>
-
-<div class="model-strip">
-  <button class="model-pill" id="currentModelBtn" onclick="openModelSheet()"></button>
-</div>
-
-<div class="modal-bg" id="modelSheet">
-  <div class="modal" style="max-height:70vh; overflow-y:auto;">
-    <h2>Выбор модели</h2>
-    <div id="modelList"></div>
-    <span class="close" onclick="document.getElementById('modelSheet').classList.remove('open')">Закрыть</span>
-  </div>
-</div>
-
-<main id="chat">
-  <div class="msg ai">Привет! Выбери модель сверху и напиши сообщение. Это дизайн-демо — ответы здесь не настоящие, экран собран, чтобы оценить стиль перед сборкой рабочего APK.</div>
-</main>
-
-<footer>
-  <input id="inp" placeholder="Напиши сообщение..." onkeydown="if(event.key==='Enter')sendMsg()">
-  <button id="send" onclick="sendMsg()">➤</button>
-</footer>
-
-<div class="modal-bg" id="modal">
-  <div class="modal">
-    <h2>Добавить API-ключ</h2>
-    <input placeholder="sk-..." id="keyInput">
-    <input placeholder="Base URL (https://ai.starimg.ru)" id="urlInput">
-    <p id="modelLabel" style="color:var(--muted); font-size:12px; margin:4px 0;">Слаг модели</p>
-    <input placeholder="например claude-opus-5" id="modelInput">
-    <button class="save" onclick="saveKey()">Сохранить</button>
-    <span class="close" onclick="document.getElementById('modal').classList.remove('open')">Отмена</span>
-  </div>
-</div>
-
-<script>
-const models=[
-  {n:"Fable 5.1",prov:"Claude",c:"red",p:"x8",slug:"claude-fable-5-2"},
-  {n:"Fable 5",prov:"Claude",c:"red",p:"x8",slug:"claude-fable-5"},
-  {n:"Opus 5/4",prov:"Claude",c:"orange",p:"x4",slug:"claude-opus-5-5"},
-  {n:"Sonnet 5",prov:"Claude",c:"green",p:"x2",slug:"claude-sonnet-5"},
-  {n:"GPT-6.2 Astra",prov:"OpenAI",c:"teal",p:"x8",slug:"gpt-6.2-astra"},
-  {n:"GPT-6.2 Sol",prov:"OpenAI",c:"teal",p:"x3",slug:"gpt-6.2-sol"},
-  {n:"GPT-6.1 Terra",prov:"OpenAI",c:"teal",p:"x2",slug:"gpt-6.1-terra"},
-  {n:"Gemini 4 Argon",prov:"Gemini",c:"blue",p:"x6",slug:"gemini-4-argon"},
-  {n:"Gemini 3.8 Flash",prov:"Gemini",c:"blue",p:"x1",slug:"gemini-3.8-flash"},
-];
-let selectedModelIndex=3;
-let apiKey='', baseUrl='';
-let history=[];
-restoreState();
-
-function renderCurrentPill(){
-  const m=models[selectedModelIndex];
-  document.getElementById('currentModelBtn').innerHTML=
-    `<span class="dot" style="background:var(--${m.c})"></span><span class="mp-name">${m.n}</span><span class="mp-price">${m.prov} · цена ${m.p}</span>`;
+<header>  wrap.innerHTML='';
+  if(!store.list.length){
+    wrap.innerHTML='<p class="sub">Ключей пока нет — добавь первый ниже.</p>';
+    return;
+  }
+  store.list.forEach((k,i)=>{
+    const row=document.createElement('div');
+    row.className='key-row'+(i===store.active?' active':'');
+    const masked=k.key?(k.key.slice(0,6)+'···'+k.key.slice(-4)):'';
+    row.innerHTML=`<div class="kr-info"><div class="kr-label">${k.label||('ключ '+(i+1))}</div><div class="kr-sub">${masked} · ${k.url||''}</div></div><div class="kr-del">✕</div>`;
+    row.querySelector('.kr-info').onclick=()=>{
+      store.active=i;
+      persistState();
+      renderKeyList(prov);
+    };
+    row.querySelector('.kr-del').onclick=(e)=>{
+      e.stopPropagation();
+      store.list.splice(i,1);
+      if(store.active>=store.list.length) store.active=Math.max(0,store.list.length-1);
+      persistState();
+      renderKeyList(prov);
+    };
+    wrap.appendChild(row);
+  });
 }
 
-function openModelSheet(){
-  const list=document.getElementById('modelList');
-  list.innerHTML='';
-  const providers=[...new Set(models.map(m=>m.prov))];
-  providers.forEach(prov=>{
-    const label=document.createElement('div');
-    label.className='provider-label';
-    label.textContent=prov;
-    list.appendChild(label);
-    models.forEach((m,i)=>{
-      if(m.prov!==prov)return;
-      const row=document.createElement('div');
-      row.className='model-row'+(i===selectedModelIndex?' sel':'');
-      row.innerHTML=`<span class="dot" style="background:var(--${m.c})"></span><span class="mn">${m.n}</span><span class="mp">x${m.p.replace('x','')}</span>`;
-      row.onclick=()=>{
-        selectedModelIndex=i;
-        renderCurrentPill();
-        persistState();
-        document.getElementById('modelSheet').classList.remove('open');
-      };
-      list.appendChild(row);
+function openKeyModal(){
+  const prov=models[selectedModelIndex].prov;
+  document.getElementById('modal').dataset.prov=prov;
+  document.getElementById('keyModalTitle').textContent='Ключи — '+prov;
+  document.getElementById('modelLabel').textContent='Слаг модели: '+models[selectedModelIndex].n;
+  document.getElementById('modelInput').value=models[selectedModelIndex].slug;
+  document.getElementById('keyLabelInput').value='';
+  document.getElementById('keyInput').value='';
+  document.getElementById('urlInput').value='';
+  document.getElementById('addKeyForm').style.display='none';
+  renderKeyList(prov);
+  document.getElementById('modal').classList.add('open');
+}
+
+function addKey(){
+  const prov=document.getElementById('modal').dataset.prov;
+  const store=getProvStore(prov);
+  const label=document.getElementById('keyLabelInput').value.trim();
+  const key=document.getElementById('keyInput').value.trim();
+  const url=document.getElementById('urlInput').value.trim().replace(/\/$/,'');
+  if(!key||!url)return;
+  store.list.push({label:label||('ключ '+(store.list.length+1)), key, url});
+  store.active=store.list.length-1;
+  persistState();
+  document.getElementById('keyLabelInput').value='';
+  document.getElementById('keyInput').value='';
+  document.getElementById('urlInput').value='';
+  document.getElementById('addKeyForm').style.display='none';
+  renderKeyList(prov);
+}
+
+function saveSlug(){
+  const slug=document.getElementById('modelInput').value.trim();
+  if(slug){ models[selectedModelIndex].slug=slug; persistState(); }
+}
+
+function addMsg(role,text,tag,tagColor){
+  const chat=document.getElementById('chat');
+  const el=document.createElement('div');
+  el.className='msg '+(role==='user'?'user':'ai');
+  if(role==='ai' && tag){
+    el.innerHTML=`<div class="msg-tag" style="color:${tagColor||'var(--muted)'}">${tag}</div><div class="msg-text"></div>`;
+    el.querySelector('.msg-text').textContent=text;
+  }else{
+    el.textContent=text;
+  }
+  chat.appendChild(el);
+  chat.scrollTop=chat.scrollHeight;
+  return el;
+}
+
+function setMsgText(el,text){
+  const t=el.querySelector('.msg-text');
+  if(t) t.textContent=text; else el.textContent=text;
+}
+
+async function sendMsg(){
+  const inp=document.getElementById('inp');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  addMsg('user',text);
+
+  const model=models[selectedModelIndex];
+  const store=getProvStore(model.prov);
+  const c=store.list[store.active];
+  if(!c||!c.key||!c.url){
+    addMsg('ai','Для '+model.prov+' ещё не задан ключ. Нажми 🔑 Ключ и добавь его для этого провайдера.');
+    return;
+  }
+
+  history.push({role:'user',content:text});
+  const pmeta=providerMeta[model.prov]||{};
+  const thinking=addMsg('ai','',model.prov+' · '+model.n,pmeta.color);
+  thinking.querySelector('.msg-text').innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+
+  try{
+    const res=await fetch(c.url+'/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':c.key,
+        'anthropic-version':'2023-06-01'
+      },
+      body:JSON.stringify(Object.assign(
+        {model:model.slug, max_tokens:1024, messages:history},
+        systemPrompt ? {system:systemPrompt} : {}
+      ))
+    });
+    const data=await res.json();
+    if(data.error){
+      setMsgText(thinking,'Ошибка: '+(data.error.message||JSON.stringify(data.error)));
+      return;
+    }
+    let reply='';
+    if(Array.isArray(data.content)){
+      const textBlock=data.content.find(b=>b.type==='text');
+      reply=textBlock?textBlock.text:'';
+    }
+    setMsgText(thinking, reply || 'Пустой ответ от сервера: '+JSON.stringify(data));
+    if(reply) history.push({role:'assistant',content:reply});
+    persistState();
+  }catch(e){
+    setMsgText(thinking,'Не получилось связаться с сервером: '+e.message);
+  }
+}
+</script>
+</body>
+</html>.appendChild(row);
     });
   });
   document.getElementById('modelSheet').classList.add('open');
