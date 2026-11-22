@@ -12,6 +12,7 @@
   --bg:#0b0b10; --surface:#15151d; --surface2:#1d1d28;
   --border:#2a2a38; --text:#f0f0f5; --muted:#8a8a9a;
   --accent:#6d6dff; --red:#ff5c5c; --orange:#ffa84d; --green:#4ade80;
+  --teal:#2dd4bf; --blue:#60a5fa;
   color-scheme: dark;
 }
 *{box-sizing:border-box;}
@@ -51,25 +52,33 @@ header h1{
   transition:transform .15s ease, border-color .15s ease;
 }
 .key-btn:active{transform:scale(.94); border-color:var(--accent);}
-.model-strip{display:flex; gap:8px; padding:12px 16px; overflow-x:auto;}
-.model-chip{
-  flex:0 0 auto; background:var(--surface); border:1px solid var(--border);
-  border-radius:14px; padding:10px 14px; min-width:140px;
-  display:flex; flex-direction:column; gap:4px; cursor:pointer;
-  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+.model-strip{padding:10px 16px 4px;}
+.model-pill{
+  display:flex; align-items:center; gap:8px; background:var(--surface);
+  border:1px solid var(--border); border-radius:20px; padding:9px 14px;
+  width:100%; transition:border-color .15s ease, transform .12s ease;
 }
-.model-chip:active{transform:scale(.96);}
-.model-chip.active{
-  border-color:var(--accent); background:var(--surface2);
-  box-shadow:0 0 0 1px var(--accent), 0 6px 18px rgba(109,109,255,.25);
-  transform:translateY(-2px);
-}
+.model-pill:active{transform:scale(.98);}
+.model-pill .mp-name{font-size:14px; font-weight:600; flex:1; text-align:left;}
+.model-pill .mp-price{font-size:11px; color:var(--muted);}
 .dot{
-  width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;
-  box-shadow:0 0 8px currentColor;
+  width:8px; height:8px; border-radius:50%; display:inline-block;
+  box-shadow:0 0 8px currentColor; flex:0 0 auto;
 }
-.model-name{font-size:13px; font-weight:600;}
-.model-price{font-size:11px; color:var(--muted);}
+.provider-label{
+  font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
+  padding:10px 2px 4px;
+}
+.model-row{
+  display:flex; align-items:center; gap:10px; padding:11px 10px; border-radius:12px;
+  transition:background .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.model-row:active{background:var(--surface2); transform:scale(.98);}
+.model-row.sel{background:var(--surface2); box-shadow:0 0 0 1px var(--accent) inset, 0 0 16px rgba(109,109,255,.2);}
+.model-pill{transition:border-color .15s ease, transform .12s ease, box-shadow .2s ease;}
+.model-pill:focus-within, .model-pill.pulse{box-shadow:0 0 0 3px rgba(109,109,255,.2);}
+.model-row .mn{font-size:14px; font-weight:600; flex:1;}
+.model-row .mp{font-size:11px; color:var(--muted);}
 main{flex:1; overflow-y:auto; padding:10px 16px 20px; display:flex; flex-direction:column; gap:12px;}
 .msg{
   max-width:82%; padding:10px 14px; border-radius:16px; font-size:14.5px; line-height:1.4;
@@ -106,14 +115,23 @@ footer{
 }
 #send:active{transform:scale(.88);}
 .modal-bg{
-  position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+  position:fixed; inset:0; background:rgba(0,0,0,0); display:flex;
   align-items:flex-end; justify-content:center; z-index:20;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .25s ease, background .25s ease;
 }
-.modal-bg.open{display:flex;}
+.modal-bg.open{
+  opacity:1; visibility:visible; pointer-events:auto;
+  background:rgba(0,0,0,.6);
+}
 .modal{
   background:var(--surface); width:100%; max-width:480px; border-radius:20px 20px 0 0;
   padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.19,1,.22,1);
+  box-shadow:0 -10px 40px rgba(0,0,0,.4);
 }
+.modal-bg.open .modal{transform:translateY(0);}
 .modal h2{margin:0 0 12px; font-size:16px;}
 .modal input{
   width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text);
@@ -132,7 +150,17 @@ footer{
   <button class="key-btn" onclick="openKeyModal()">🔑 Ключ</button>
 </header>
 
-<div class="model-strip" id="models"></div>
+<div class="model-strip">
+  <button class="model-pill" id="currentModelBtn" onclick="openModelSheet()"></button>
+</div>
+
+<div class="modal-bg" id="modelSheet">
+  <div class="modal" style="max-height:70vh; overflow-y:auto;">
+    <h2>Выбор модели</h2>
+    <div id="modelList"></div>
+    <span class="close" onclick="document.getElementById('modelSheet').classList.remove('open')">Закрыть</span>
+  </div>
+</div>
 
 <main id="chat">
   <div class="msg ai">Привет! Выбери модель сверху и напиши сообщение. Это дизайн-демо — ответы здесь не настоящие, экран собран, чтобы оценить стиль перед сборкой рабочего APK.</div>
@@ -157,29 +185,91 @@ footer{
 
 <script>
 const models=[
-  {n:"Fable 5.1",c:"red",p:"x8",slug:"claude-fable-5-1"},
-  {n:"Fable 5",c:"red",p:"x8",slug:"claude-fable-5"},
-  {n:"Opus 5/4",c:"orange",p:"x4",slug:"claude-opus-5"},
-  {n:"Sonnet 5",c:"green",p:"x2",slug:"claude-sonnet-5"},
+  {n:"Fable 5.1",prov:"Claude",c:"red",p:"x8",slug:"claude-fable-5-2"},
+  {n:"Fable 5",prov:"Claude",c:"red",p:"x8",slug:"claude-fable-5"},
+  {n:"Opus 5/4",prov:"Claude",c:"orange",p:"x4",slug:"claude-opus-5-5"},
+  {n:"Sonnet 5",prov:"Claude",c:"green",p:"x2",slug:"claude-sonnet-5"},
+  {n:"GPT-6.2 Astra",prov:"OpenAI",c:"teal",p:"x8",slug:"gpt-6.2-astra"},
+  {n:"GPT-6.2 Sol",prov:"OpenAI",c:"teal",p:"x3",slug:"gpt-6.2-sol"},
+  {n:"GPT-6.1 Terra",prov:"OpenAI",c:"teal",p:"x2",slug:"gpt-6.1-terra"},
+  {n:"Gemini 4 Argon",prov:"Gemini",c:"blue",p:"x6",slug:"gemini-4-argon"},
+  {n:"Gemini 3.8 Flash",prov:"Gemini",c:"blue",p:"x1",slug:"gemini-3.8-flash"},
 ];
 let selectedModelIndex=3;
-const strip=document.getElementById('models');
-models.forEach((m,i)=>{
-  const el=document.createElement('div');
-  el.className='model-chip'+(i===selectedModelIndex?' active':'');
-  el.innerHTML=`<span class="model-name"><span class="dot" style="background:var(--${m.c})"></span>${m.n}</span><span class="model-price">цена ${m.p}</span>`;
-  el.onclick=()=>{
-    selectedModelIndex=i;
-    document.querySelectorAll('.model-chip').forEach(c=>c.classList.remove('active'));
-    el.classList.add('active');
-  };
-  strip.appendChild(el);
-});
-
 let apiKey='', baseUrl='';
 let history=[];
+restoreState();
+
+function renderCurrentPill(){
+  const m=models[selectedModelIndex];
+  document.getElementById('currentModelBtn').innerHTML=
+    `<span class="dot" style="background:var(--${m.c})"></span><span class="mp-name">${m.n}</span><span class="mp-price">${m.prov} · цена ${m.p}</span>`;
+}
+
+function openModelSheet(){
+  const list=document.getElementById('modelList');
+  list.innerHTML='';
+  const providers=[...new Set(models.map(m=>m.prov))];
+  providers.forEach(prov=>{
+    const label=document.createElement('div');
+    label.className='provider-label';
+    label.textContent=prov;
+    list.appendChild(label);
+    models.forEach((m,i)=>{
+      if(m.prov!==prov)return;
+      const row=document.createElement('div');
+      row.className='model-row'+(i===selectedModelIndex?' sel':'');
+      row.innerHTML=`<span class="dot" style="background:var(--${m.c})"></span><span class="mn">${m.n}</span><span class="mp">x${m.p.replace('x','')}</span>`;
+      row.onclick=()=>{
+        selectedModelIndex=i;
+        renderCurrentPill();
+        persistState();
+        document.getElementById('modelSheet').classList.remove('open');
+      };
+      list.appendChild(row);
+    });
+  });
+  document.getElementById('modelSheet').classList.add('open');
+}
+renderCurrentPill();
+
+if(history.length){
+  const chat=document.getElementById('chat');
+  history.forEach(m=>{
+    const el=document.createElement('div');
+    el.className='msg '+(m.role==='user'?'user':'ai');
+    el.textContent=m.content;
+    chat.appendChild(el);
+  });
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function persistState(){
+  try{
+    localStorage.setItem('aihub_state', JSON.stringify({
+      apiKey, baseUrl, selectedModelIndex, models, history
+    }));
+  }catch(e){}
+}
+
+function restoreState(){
+  try{
+    const raw=localStorage.getItem('aihub_state');
+    if(!raw)return;
+    const s=JSON.parse(raw);
+    apiKey=s.apiKey||'';
+    baseUrl=s.baseUrl||'';
+    selectedModelIndex=typeof s.selectedModelIndex==='number'?s.selectedModelIndex:selectedModelIndex;
+    if(Array.isArray(s.models)){
+      s.models.forEach((sm,i)=>{ if(models[i]&&sm.slug) models[i].slug=sm.slug; });
+    }
+    if(Array.isArray(s.history)) history=s.history;
+  }catch(e){}
+}
 
 function openKeyModal(){
+  document.getElementById('keyInput').value=apiKey;
+  document.getElementById('urlInput').value=baseUrl;
   document.getElementById('modelInput').value=models[selectedModelIndex].slug;
   document.getElementById('modelLabel').textContent='Слаг модели: '+models[selectedModelIndex].n;
   document.getElementById('modal').classList.add('open');
@@ -190,6 +280,7 @@ function saveKey(){
   baseUrl=document.getElementById('urlInput').value.trim().replace(/\/$/,'');
   const slug=document.getElementById('modelInput').value.trim();
   if(slug) models[selectedModelIndex].slug=slug;
+  persistState();
   document.getElementById('modal').classList.remove('open');
 }
 
@@ -220,22 +311,24 @@ async function sendMsg(){
   const thinking=addMsg('ai','...');
 
   try{
-    const res=await fetch(baseUrl+'/v1/chat/completions',{
+    const res=await fetch(baseUrl+'/v1/messages',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'Authorization':'Bearer '+apiKey
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01'
       },
-      body:JSON.stringify({model:modelSlug, messages:history})
+      body:JSON.stringify({model:modelSlug, max_tokens:1024, messages:history})
     });
     const data=await res.json();
     if(data.error){
       thinking.textContent='Ошибка: '+(data.error.message||JSON.stringify(data.error));
       return;
     }
-    const reply=data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    const reply=data.content && data.content[0] && data.content[0].text;
     thinking.textContent=reply || 'Пустой ответ от сервера: '+JSON.stringify(data);
     if(reply) history.push({role:'assistant',content:reply});
+    persistState();
   }catch(e){
     thinking.textContent='Не получилось связаться с сервером: '+e.message;
   }
