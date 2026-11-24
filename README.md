@@ -54,7 +54,7 @@
   - Тёмная тема с градиентом
   - Поддержка safe-area для notch и gesture-bar
   - Плавные анимации и переходы
-  - History of conversations с быстрым переключением между чатами
+  - История диалогов с быстрым переключением между чатами
 
 ---
 
@@ -189,9 +189,9 @@ npx cap build android
 
 ```
 ✅ Contents: read (чтение файлов)
+✅ Contents: write (требуется для работы с CI/CD и редактирования файлов агентом)
 ✅ Actions: read (просмотр логов Actions)
 ✅ Metadata: read (получение информации о репо)
-❌ Не нужны: write права на основном репо (используйте fine-grained!)
 ```
 
 ---
@@ -215,7 +215,7 @@ npx cap build android
 
 1. Нажмите **🧠** внизу для включения
 2. Выберите уровень: **Low, Medium, High, Max**
-3. Смотрите **хід рассуждений** в отдельной секции перед ответом
+3. Смотрите **ход рассуждений** в отдельной секции перед ответом
 
 ### Собственные ключи и URL
 
@@ -322,7 +322,7 @@ GitHub репо: myuser/broken-ci
 
 - [ ] iOS версия (через Capacitor)
 - [ ] Локальное хранилище истории с шифрованием
-- [ ] Поддержка лучше custom LLM-ов (Ollama, текущие lokalne модели)
+- [ ] Улучшенная поддержка локальных и кастомных LLM (Ollama и др.)
 - [ ] Экспорт чатов в PDF / Markdown
 - [ ] Синхронизация между устройствами
 - [ ] Voice input / output (Speech-to-Text, Text-to-Speech)
@@ -351,7 +351,6 @@ GitHub репо: myuser/broken-ci
 ## 💬 Вопросы?
 
 - **GitHub Issues**: [Опубликуй вопрос](https://github.com/kikysiki9-rgb/ai-hub-app/issues)
-- **Обсуждение**: [Discussions](https://github.com/kikysiki9-rgb/ai-hub-app/discussions)
 
 ---
 
@@ -360,7 +359,7 @@ GitHub репо: myuser/broken-ci
 Если проект тебе помог — поставь ⭐ и расскажи о нём друзьям. Это очень мотивирует на развитие!
 
 **Версия**: 1.0.0  
-**Последнее обновление**: 2024-11-24  
+**Последнее обновление**: 2026-11-24  
 **Автор**: [@kikysiki9-rgb](https://github.com/kikysiki9-rgb)
 
 ---
